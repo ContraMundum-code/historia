@@ -22,7 +22,10 @@ CREATE TABLE IF NOT EXISTS person (
   occupation    VARCHAR(100),
   biography     TEXT,
   source_note   TEXT,
+  coverage      ENUM('full', 'stub') NOT NULL DEFAULT 'full'
+                COMMENT 'full=核心人物，有完整资料；stub=因关系被带入的边界人物',
   KEY idx_person_name (name),
+  KEY idx_person_coverage (coverage),
   KEY idx_person_dynasty (dynasty_id),
   CONSTRAINT fk_person_dynasty FOREIGN KEY (dynasty_id) REFERENCES dynasty (dynasty_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
