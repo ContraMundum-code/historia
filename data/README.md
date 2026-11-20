@@ -11,12 +11,13 @@
 
 ## 当前数据
 
-由 `scripts/exportCbdb.py` 从 CBDB 离线库导出，只保留唐、宋、明三朝且生卒年齐全的人物。
+由 `scripts/exportCbdb.py` 从 CBDB 离线库导出。筛选条件：唐、宋、明三朝，生卒年齐全，且至少有一条关系。
 
 | 文件 | 内容 | 规模 |
 |---|---|---|
-| dictionaries/person.csv | 人物 | 14,740 人 |
-| dictionaries/alias.csv | 别名 | 19,158 条 |
+| dictionaries/person.csv | 人物 | 5,077 人 |
+| dictionaries/alias.csv | 别名 | 7,033 条 |
 | dictionaries/relations.csv | 关系 | 11,949 条 |
 
-其中 5,077 人至少有一条关系，1,240 人度数不小于 5。核心人物建议从这 5,077 人里按度数挑选。
+朝代分布：唐 1,321、宋 2,948、明 808。有别名的人物占 78.4%，度数不小于 5 的有 1,240 人，最大度数 339。
+关系两端均在人物表内，无孤立节点。

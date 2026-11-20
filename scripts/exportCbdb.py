@@ -72,15 +72,46 @@ def export(db: Path, out: Path) -> None:
         ORDER BY b.c_dy, b.c_birthyear
     """, params)
     rows = cur.fetchall()
-    keep = {r[0] for r in rows}
-    print(f"人物 {len(rows):,} 人")
+    candidates = {r[0] for r in rows}
+    print(f"候选人物 {len(rows):,} 人")
 
     # 别名:先取字与号填进主表,全部类型再单独进 alias.csv
     aliases: dict[int, dict[int, str]] = {}
     for pid, name, tcode in cur.execute(
             "SELECT c_personid, c_alt_name_chn, c_alt_name_type_code FROM ALTNAME_DATA"):
-        if pid in keep and name:
+        if pid in candidates and name:
             aliases.setdefault(pid, {}).setdefault(tcode, name)
+
+    # 亲属关系全部归为家族
+    relations: list[tuple] = []
+    for pid, kid, src, pages in cur.execute(
+            "SELECT c_personid, c_kin_id, c_source, c_pages FROM KIN_DATA"):
+        if pid in candidates and kid in candidates:
+            relations.append((pid, kid, "家族", "", "", f"CBDB:{src}:{pages}"))
+
+    # 亲疏关系按关键词归并,认不出的丢弃
+    sql = """
+        SELECT a.c_personid, a.c_assoc_id, a.c_assoc_code,
+               a.c_assoc_first_year, a.c_assoc_last_year, a.c_source, a.c_pages,
+               c.c_assoc_desc_chn
+        FROM ASSOC_DATA a
+        LEFT JOIN ASSOC_CODES c ON a.c_assoc_code = c.c_assoc_code
+    """
+    dropped = 0
+    for pid, aid, code, fy, ly, src, pages, desc in cur.execute(sql):
+        if pid not in candidates or aid not in candidates:
+            continue
+        label = classify(desc or "")
+        if not label:
+            dropped += 1
+            continue
+        s_id, t_id = (aid, pid) if reversed_direction(desc or "") else (pid, aid)
+        relations.append((s_id, t_id, label, fy or "", ly or "", f"CBDB:{src}:{pages}"))
+
+    # 只保留至少有一条关系的人,孤立节点不进库
+    kept = {r[0] for r in relations} | {r[1] for r in relations}
+    rows = [r for r in rows if r[0] in kept]
+    print(f"有关系的人物 {len(rows):,} 人" + (f"(剔除孤立节点 {len(candidates) - len(rows):,} 人)"))
 
     with (out / "person.csv").open("w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
@@ -98,36 +129,12 @@ def export(db: Path, out: Path) -> None:
         w.writerow(["alias_name", "person_id", "alias_type"])
         count = 0
         for pid, amap in aliases.items():
+            if pid not in kept:
+                continue
             for tcode, aname in amap.items():
                 w.writerow([aname, pid, ALIAS_TYPE.get(tcode, "其他")])
                 count += 1
     print(f"别名 {count:,} 条")
-
-    # 亲属关系全部归为家族
-    relations: list[tuple] = []
-    for pid, kid, src, pages in cur.execute(
-            "SELECT c_personid, c_kin_id, c_source, c_pages FROM KIN_DATA"):
-        if pid in keep and kid in keep:
-            relations.append((pid, kid, "家族", "", "", f"CBDB:{src}:{pages}"))
-
-    # 亲疏关系按关键词归并,认不出的丢弃
-    sql = """
-        SELECT a.c_personid, a.c_assoc_id, a.c_assoc_code,
-               a.c_assoc_first_year, a.c_assoc_last_year, a.c_source, a.c_pages,
-               c.c_assoc_desc_chn
-        FROM ASSOC_DATA a
-        LEFT JOIN ASSOC_CODES c ON a.c_assoc_code = c.c_assoc_code
-    """
-    dropped = 0
-    for pid, aid, code, fy, ly, src, pages, desc in cur.execute(sql):
-        if pid not in keep or aid not in keep:
-            continue
-        label = classify(desc or "")
-        if not label:
-            dropped += 1
-            continue
-        s, t = (aid, pid) if reversed_direction(desc or "") else (pid, aid)
-        relations.append((s, t, label, fy or "", ly or "", f"CBDB:{src}:{pages}"))
 
     with (out / "relations.csv").open("w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
