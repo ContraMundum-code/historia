@@ -84,6 +84,14 @@ python scripts/dataPrep/exportCbdb.py
 dynasty、person、person_alias、person_category、person_category_mapping、
 document、person_relation、event、event_participant、extraction_record。
 
+## 分工
+
+| 成员 | 方向 |
+|---|---|
+| A | 前端与可视化 |
+| B | 后端与数据库 |
+| C | 文本处理与抽取 |
+
 ## 文档
 
 - `docs/system_design.md` 系统设计与数据流
