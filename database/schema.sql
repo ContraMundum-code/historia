@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS person (
   death_year    INT,
   dynasty_id    INT,
   birthplace    VARCHAR(200),
-  occupation    VARCHAR(100),
+  occupation    VARCHAR(100) COMMENT '主要身份的冗余展示字段，多身份见 person_category_mapping',
   biography     TEXT,
   source_note   TEXT,
   coverage      ENUM('full', 'stub') NOT NULL DEFAULT 'full'
@@ -28,6 +28,25 @@ CREATE TABLE IF NOT EXISTS person (
   KEY idx_person_coverage (coverage),
   KEY idx_person_dynasty (dynasty_id),
   CONSTRAINT fk_person_dynasty FOREIGN KEY (dynasty_id) REFERENCES dynasty (dynasty_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS person_category (
+  category_id   INT PRIMARY KEY AUTO_INCREMENT,
+  category_name VARCHAR(50) NOT NULL,
+  description   VARCHAR(200),
+  UNIQUE KEY uk_category_name (category_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS person_category_mapping (
+  id          INT PRIMARY KEY AUTO_INCREMENT,
+  person_id   INT NOT NULL,
+  category_id INT NOT NULL,
+  source      VARCHAR(50) COMMENT 'cbdb/rule/manual',
+  confidence  FLOAT,
+  UNIQUE KEY uk_person_category (person_id, category_id),
+  KEY idx_pcm_person (person_id),
+  CONSTRAINT fk_pcm_person FOREIGN KEY (person_id) REFERENCES person (person_id),
+  CONSTRAINT fk_pcm_category FOREIGN KEY (category_id) REFERENCES person_category (category_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS person_alias (
