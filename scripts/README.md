@@ -36,10 +36,15 @@ python scripts/corpus/01_fetchSources.py --books 宋史 --force
 ```
 
 从中文维基文库 MediaWiki API 拉取宋史、明史、舊唐書、新唐書全部正卷，按卷缓存到
-`.scratch/sources/<书名>.json`。命中缓存时跳过，`--force` 强制重下。
+`.scratch/sources/<书名>.json`。已缓存的卷跳过，`--force` 强制重下。
 
-四部合计 1,293 卷、约 90 MB，6 并发约 3 分钟。只收 `卷N` 正卷页面，排除
-「(四庫全書本)」「全覽」「紀事本末」等同前缀页面。
+取渲染后的纯文本（`prop=extracts&explaintext`）而非 wikitext：文库正文里人名用
+`{{ProperNoun|司馬光}}` 包、年号用 `{{YL|元豐三年}}` 包、生僻字用 `{{SKchar|2593}}`
+编码，直接剥模板会丢姓名和年号，渲染文本已展开成原字。
+
+四部合计 1,293 卷、约 86 MB，3 并发约 10 分钟。只收 `卷N` 正卷页面，排除
+「(四庫全書本)」「全覽」「紀事本末」等同前缀页面。表格卷（宰輔表、宗室世系表、
+諸王世表）渲染超时，取不到的记入 `<书名>.missing.json`，共 32 卷，均不含列传正文。
 
 ## corpus/02_extractBiographies.py
 
@@ -55,5 +60,5 @@ python scripts/corpus/02_extractBiographies.py --roster .scratch/workload/person
 「人名，字某某」正文特征串。清洗涵盖繁简转换标记、内链、帝号括注、附传前缀，
 并统一异体字（脩→修、褘→禕）。
 
-当前对 125 人名单的覆盖率 102 人（81.6%），唐 6/6、宋 95/118、明 1/1，正文中位 2,336 字。
+当前对 125 人名单的覆盖率 101 人（80.8%），唐 6/6、宋 94/118、明 1/1，正文中位 2,403 字。
 未命中名单见 `data/corpus/manifest.csv` 的 `status=missing` 行。

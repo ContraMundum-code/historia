@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """在正史底本中定位名单人物的本传，按人输出纯文本。
 
-纪传体正史的列传卷以人物名为标题分节（宋史用 `==黃庭堅==`，新唐書用
-`=錢徽=`，附传用 `===附 孟郊===`），标题清洗后即为天然索引。标题失配时
+纪传体正史的列传卷以人物名为标题分节（宋史用 `== 黃庭堅 ==`，新唐書用
+`= 錢徽 =`，附传用 `=== 附 孟郊 ===`），标题清洗后即为天然索引。标题失配时
 退回「人名，字某某」的正文特征串，覆盖标题写法不规范或有异体字的情形。
 
 用法：
@@ -21,17 +21,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 BOOK_BY_DYNASTY = {"唐": ["舊唐書", "新唐書"], "宋": ["宋史"], "明": ["明史"]}
-HEADING = re.compile(r"^(={1,4})\s*([^=\n]+?)\s*\1\s*$", re.M)
+HEADING = re.compile(r"^(={1,4}) (.+?) \1$", re.M)
 # 同前缀页面（宋史全文、宋史紀事本末、四庫全書本）不是正卷，入索引会串书
 VOLUME_PAGE = re.compile(r"^[^/]+/卷[零一二三四五六七八九十百〇0-9]+[上下中]?$")
-HEADING_CLEAN = (
-    (re.compile(r"^-\{(.*)\}-$"), r"\1"),          # -{范仲淹}- 繁简转换标记
-    (re.compile(r"\[\[(?:[^\]|]*\|)?([^\]]*)\]\]"), r"\1"),  # [[w:X|X]]
-    (re.compile(r"<[^>]+>"), ""),
-    (re.compile(r"\{\{[^}]*\}\}"), ""),
-    (re.compile(r"^[（(].*?[)）]\s*"), ""),
-    (re.compile(r"^附[:：]?\s*"), ""),
-)
+# 标题里的注记：「子 璉」「弟 鍇」「附 孟郊」「從弟 審」
+ATTACHED = re.compile(r"^(子|弟|兄|孫|從子|從弟|族子|族弟|附)[:：]?\s*")
 SEQ_SUFFIX = re.compile(r"(上|下|中)$")
 VARIANT_CHARS = str.maketrans({"脩": "修", "濬": "浚", "叡": "睿", "褘": "禕"})
 HAN = re.compile(r"[\u4e00-\u9fff]")
@@ -43,26 +37,21 @@ def canonical(name: str) -> str:
     return name.translate(VARIANT_CHARS)
 
 
-def clean_heading(raw: str) -> str:
-    text = raw.strip()
-    for pattern, repl in HEADING_CLEAN:
-        text = pattern.sub(repl, text)
-    text = text.replace("-{", "").replace("}-", "")
-    return re.split(r"[　\s]", text.strip())[0]
+def heading_name(raw: str) -> str:
+    return ATTACHED.sub("", raw.strip())
 
 
 def build_index(texts: dict[str, str]) -> dict[str, list[tuple[str, str]]]:
-    """人名 -> [(卷题, 正文)]，同名的多卷条目全部保留。"""
+    """人名 -> [(卷题, 正文)]，同名多卷（如李綱上下）全部保留。"""
     index: dict[str, list[tuple[str, str]]] = {}
-    for volume, wikitext in texts.items():
+    for volume, text in texts.items():
         if not VOLUME_PAGE.match(volume):
             continue
-        wikitext = re.sub(r"\{\{textquality[^}]*\}\}", "", wikitext)
-        parts = HEADING.split(wikitext)
-        # split 捕获分隔符后三元一组：分隔符、标题、正文
+        parts = HEADING.split(text)
+        # split 捕获分隔符后四元一组：等号、标题、正文
         for i in range(1, len(parts) - 2, 3):
-            name = clean_heading(parts[i + 1])
-            body = parts[i + 2]
+            name = heading_name(parts[i + 1])
+            body = parts[i + 2].strip()
             if not HAN.search(name) or len(body) < MIN_SECTION_CHARS:
                 continue
             key = canonical(SEQ_SUFFIX.sub("", name))
@@ -78,12 +67,12 @@ def locate(index: dict[str, list[tuple[str, str]]], texts: dict[str, str],
         volume, body = max(index[key], key=lambda item: len(item[1]))
         return "heading", volume, body
     pattern = re.compile(r"(?:^|\n)[\u3000\s]*" + re.escape(name) + r"[，,、]?\s*字[\u4e00-\u9fff]")
-    for volume, wikitext in texts.items():
+    for volume, text in texts.items():
         if not VOLUME_PAGE.match(volume):
             continue
-        hit = pattern.search(wikitext)
+        hit = pattern.search(text)
         if hit:
-            return "inline", volume, wikitext[hit.start():hit.start() + 4000].strip()
+            return "inline", volume, text[hit.start():hit.start() + 4000].strip()
     return None
 
 
@@ -97,7 +86,7 @@ def main() -> int:
 
     with args.roster.open(encoding="utf-8-sig") as fh:
         roster = list(csv.DictReader(fh))
-    print(f"名单 {len(roster)} 人 → {args.roster}")
+    print(f"名单 {len(roster)} 人 → {args.roster.name}")
 
     books = sorted({b for row in roster for b in BOOK_BY_DYNASTY.get(row["dynasty"].strip(), [])})
     raw = {}
@@ -142,8 +131,7 @@ def main() -> int:
 
     total_hit, total = 0, 0
     for dynasty in sorted({k[0] for k in stats}):
-        hit = stats[(dynasty, "hit")]
-        span = hit + stats[(dynasty, "miss")]
+        hit, span = stats[(dynasty, "hit")], sum(v for k, v in stats.items() if k[0] == dynasty)
         total_hit += hit
         total += span
         print(f"{dynasty}: {hit}/{span} = {hit / span:.1%}")
