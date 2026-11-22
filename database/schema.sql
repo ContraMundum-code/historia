@@ -88,6 +88,33 @@ CREATE TABLE IF NOT EXISTS person_relation (
   CONSTRAINT fk_rel_document FOREIGN KEY (document_id) REFERENCES document (document_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS event (
+  event_id        INT PRIMARY KEY AUTO_INCREMENT,
+  event_name      VARCHAR(200) NOT NULL COMMENT '事件名，取史传原文或概括，同一事件多处出现用同一名',
+  event_type      VARCHAR(20)  NOT NULL COMMENT '政治/军事/外交/文化/经济/司法/其他',
+  year            SMALLINT     COMMENT '公元纪年，只填年份整数；原文纪年填在 year_raw',
+  year_raw        VARCHAR(50)  COMMENT '原文纪年，如「元豐五年」「紹興十一年」',
+  location        VARCHAR(150) COMMENT '发生地，原文无载则留空',
+  description     TEXT         COMMENT '100-300 字，据原文概述，不得添加原文没有的内容',
+  dynasty_id      INT,
+  source_citation VARCHAR(200) NOT NULL COMMENT '出处，与 manifest.csv 的 volume 一致，如「宋史/卷338」',
+  source_quote    TEXT         COMMENT '支撑该事件的原文摘句，照录不改',
+  UNIQUE KEY uk_event (event_name, year),
+  KEY idx_event_type (event_type),
+  KEY idx_event_year (year)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS event_participant (
+  id        INT PRIMARY KEY AUTO_INCREMENT,
+  event_id  INT NOT NULL,
+  person_id INT NOT NULL,
+  role      VARCHAR(20) NOT NULL COMMENT '主角/主谋/参与者/支持者/反对者/受害者/见证者/其他',
+  UNIQUE KEY uk_event_person_role (event_id, person_id, role),
+  KEY idx_ep_person (person_id),
+  CONSTRAINT fk_ep_event FOREIGN KEY (event_id) REFERENCES event (event_id),
+  CONSTRAINT fk_ep_person FOREIGN KEY (person_id) REFERENCES person (person_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS extraction_record (
   record_id        INT PRIMARY KEY AUTO_INCREMENT,
   document_id      INT,
