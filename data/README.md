@@ -4,11 +4,13 @@
 |---|---|
 | raw/ | 原始古籍文本，不入库 |
 | processed/ | 清洗后文本 |
-| dictionaries/ | 人物表与别名表 |
+| dictionaries/ | 人物表、别名表、关系表、官职表 |
 | corpus/ | 按人切好的本传正文，入库 |
 | samples/ | 标注样本与测试集 |
 
-原始语料体积较大，已在 .gitignore 中排除，只保留目录。
+原始语料体积较大，已在 .gitignore 中排除，只保留目录。CBDB 原始库 561 MB 不入库，
+所需的官职、关系、别名已分别导出成小体积 CSV 放在 `dictionaries/`，克隆仓库即可使用。
+原始库的下载地址见 `raw/cbdb_20261114.json`。
 
 ## 当前数据
 
@@ -23,6 +25,7 @@
 | dictionaries/person.csv | 人物 | 374 人 |
 | dictionaries/alias.csv | 别名 | 1,124 条 |
 | dictionaries/relations.csv | 关系 | 1,426 条 |
+| dictionaries/personOffice.csv | 官职记录 | 5,963 条，覆盖 346/374 人 |
 
 朝代分布：宋 190、唐 92、明 92。字段齐全度：字 97%、号 64%、籍贯 99%、生卒 100%。
 平均度数 7.6，度数不小于 10 的有 86 人。关系类型：师生 450、家族 331、合作 261、朋友 264、对立 100、君臣 20。
