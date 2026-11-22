@@ -25,9 +25,10 @@ HEADING = re.compile(r"^(={1,4}) (.+?) \1$", re.M)
 # 同前缀页面（宋史全文、宋史紀事本末、四庫全書本）不是正卷，入索引会串书
 VOLUME_PAGE = re.compile(r"^[^/]+/卷[零一二三四五六七八九十百〇0-9]+[上下中]?$")
 # 标题里的注记：「子 璉」「弟 鍇」「附 孟郊」「從弟 審」
-ATTACHED = re.compile(r"^(子|弟|兄|孫|從子|從弟|族子|族弟|附)[:：]?\s*")
+# 亲属前缀。必须带分隔符，否则「孫構」「曾鞏」这类姓名会被误当成附传标记
+ATTACHED = re.compile(r"^(子|弟|兄|孫|曾孫|從子|從弟|從孫|族子|族弟|族孫|從父|族父|附)[:：\s]")
 SEQ_SUFFIX = re.compile(r"(上|下|中)$")
-VARIANT_CHARS = str.maketrans({"脩": "修", "濬": "浚", "叡": "睿", "褘": "禕"})
+VARIANT_CHARS = str.maketrans({"脩": "修", "濬": "浚", "叡": "睿", "褘": "禕", "沉": "沈", "眘": "昚", "勗": "勖"})
 HAN = re.compile(r"[\u4e00-\u9fff]")
 MIN_SECTION_CHARS = 80
 
@@ -41,31 +42,70 @@ def heading_name(raw: str) -> str:
     return ATTACHED.sub("", raw.strip())
 
 
-def build_index(texts: dict[str, str]) -> dict[str, list[tuple[str, str]]]:
-    """人名 -> [(卷题, 正文)]，同名多卷（如李綱上下）全部保留。"""
+def build_index(texts: dict[str, str]):
+    """返回 (正名索引, 附传索引)。
+
+    正名索引按人物姓名建键；附传索引处理「弟 肇」「從孫 祖禹」这类只写名不写姓
+    的标题，用父级标题的姓氏补全后建键。
+    """
     index: dict[str, list[tuple[str, str]]] = {}
+    attached: dict[str, list[tuple[str, str]]] = {}
     for volume, text in texts.items():
         if not VOLUME_PAGE.match(volume):
             continue
-        parts = HEADING.split(text)
-        # split 捕获分隔符后四元一组：等号、标题、正文
-        for i in range(1, len(parts) - 2, 3):
-            name = heading_name(parts[i + 1])
-            body = parts[i + 2].strip()
-            if not HAN.search(name) or len(body) < MIN_SECTION_CHARS:
+        stack: list[tuple[int, str]] = []
+        for match in HEADING.finditer(text):
+            level = len(match.group(1))
+            raw = match.group(2).strip()
+            while stack and stack[-1][0] >= level:
+                stack.pop()
+            parent = stack[-1][1] if stack else ""
+            stack.append((level, raw))
+            end = HEADING.search(text, match.end())
+            body = text[match.end():end.start() if end else len(text)].strip()
+            if len(body) < MIN_SECTION_CHARS:
                 continue
-            key = canonical(SEQ_SUFFIX.sub("", name))
-            index.setdefault(key, []).append((volume, body))
-    return index
+
+            name = heading_name(raw)
+            if HAN.search(name):
+                key = canonical(SEQ_SUFFIX.sub("", name))
+                index.setdefault(key, []).append((volume, body))
+
+            # 附传标题只写名不写姓（「弟 肇」「從孫 祖禹」「太祖弟 魏悼王 廷美」），
+            # 按名建键并记下父级姓氏，匹配时再用名单里的姓去核
+            tokens = raw.split()
+            if len(tokens) == 1 and not ATTACHED.match(raw):
+                continue  # 普通姓名标题已在正名索引里
+            tail = canonical(ATTACHED.sub("", tokens[-1]))
+            if not tail or len(tail) >= 3:
+                continue
+            parent_surname = canonical(parent.split()[0][:1]) if parent else ""
+            attached.setdefault(tail, []).append((volume, body, parent_surname))
+    return index, attached
 
 
-def locate(index: dict[str, list[tuple[str, str]]], texts: dict[str, str],
-           name: str) -> tuple[str, str, str] | None:
-    """返回 (匹配方式, 卷题, 正文)；标题优先，正文特征串兜底。"""
+def locate(index, attached, texts, name: str):
+    """按优先级定位：正名标题 → 附传标题 → 帝王本紀 → 正文特征串。"""
     key = canonical(name)
     if key in index:
         volume, body = max(index[key], key=lambda item: len(item[1]))
         return "heading", volume, body
+
+    # 附传：父级姓氏与名单姓氏一致才算，防止同名异姓串人
+    surname, given = canonical(name[:1]), canonical(name[1:])
+    if given in attached:
+        same = [item for item in attached[given] if item[2] in ("", surname)]
+        if same:
+            volume, body, _ = max(same, key=lambda item: len(item[1]))
+            return "attached", volume, body
+
+    # 本紀不以姓名立目，改用「某某皇帝，諱某」定位；返回整卷，本紀一卷即一朝
+    if len(name) > 1:
+        pattern = re.compile(r"皇帝[，,]?\s*諱" + re.escape(given))
+        for volume, text in texts.items():
+            if VOLUME_PAGE.match(volume) and pattern.search(text[:1200]):
+                return "reign", volume, text.strip()
+
     pattern = re.compile(r"(?:^|\n)[\u3000\s]*" + re.escape(name) + r"[，,、]?\s*字[\u4e00-\u9fff]")
     for volume, text in texts.items():
         if not VOLUME_PAGE.match(volume):
@@ -95,8 +135,8 @@ def main() -> int:
         if not path.exists():
             raise FileNotFoundError(f"缺底本 {path}，先跑 01_fetchSources.py")
         raw[book] = json.loads(path.read_text(encoding="utf-8"))
-    index = {book: build_index(texts) for book, texts in raw.items()}
-    print("索引条目", {book: len(idx) for book, idx in index.items()})
+    built = {book: build_index(texts) for book, texts in raw.items()}
+    print("索引条目", {book: f"{len(idx)} 正名 / {len(att)} 附传" for book, (idx, att) in built.items()})
 
     args.out.mkdir(parents=True, exist_ok=True)
     for stale in args.out.glob("*.txt"):
@@ -109,10 +149,17 @@ def main() -> int:
         name = re.sub(r"[（(].*?[)）]", "", row["name"].strip())
         result = None
         for book in BOOK_BY_DYNASTY.get(dynasty, []):
-            result = locate(index[book], raw[book], name)
+            result = locate(*built[book], raw[book], name)
             if result:
                 break
         mode, volume, body = result if result else ("", "", "")
+        if mode == "attached":
+            # 附传正文以名开头，补回姓氏后才可独立阅读
+            body = re.sub(r"^(子|弟|兄|孫|曾孫|從子|從弟|從孫|族子|族弟|族孫|從父|族父|附)\s*"
+                          + r"(?=" + re.escape(name[1:2]) + ")", "", body)
+            body = body.lstrip("，,、　 ")
+            if canonical(body[:1]) == canonical(name[1:2]):
+                body = name[:1] + body
         if result:
             target = args.out / f"{row['person_id']}_{row['name'].strip()}.txt"
             target.write_text(body, encoding="utf-8")
