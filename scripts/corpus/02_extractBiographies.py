@@ -165,7 +165,9 @@ def main() -> int:
             entry = manual[row["person_id"]]
             path = args.out / f"{row['person_id']}_{row['name'].strip()}.txt"
             if path.exists():
-                body = path.read_text(encoding="utf-8")
+                # 题头是给人看的出处与存疑说明，不计入正文字数
+                body = re.sub(r"(?m)^【[^】]*】.*\n", "",
+                              path.read_text(encoding="utf-8")).strip()
                 result = ("manual", entry["source"], body)
                 mode, volume = "manual", entry["source"]
         if mode == "attached":
@@ -176,8 +178,9 @@ def main() -> int:
             if canonical(body[:1]) == canonical(name[1:2]):
                 body = name[:1] + body
         if result:
-            target = args.out / f"{row['person_id']}_{row['name'].strip()}.txt"
-            target.write_text(body, encoding="utf-8")
+            if mode != "manual":  # 手工补录的文件原样保留，不覆写题头
+                target = args.out / f"{row['person_id']}_{row['name'].strip()}.txt"
+                target.write_text(body, encoding="utf-8")
             stats[(dynasty, "hit")] += 1
         else:
             stats[(dynasty, "miss")] += 1

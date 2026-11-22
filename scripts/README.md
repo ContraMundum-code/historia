@@ -69,4 +69,5 @@ python scripts/corpus/02_extractBiographies.py --roster .scratch/workload/person
 当前对 125 人名单的覆盖率 124 人（99.2%），唐 6/6、宋 117/118、明 1/1，正文中位 2,042 字。
 
 `data/corpus/sourcesManual.csv` 登记手工补录的传记（person_id、出处、待复核说明）。
-脚本重跑时保留这些文件，不再覆盖；名单里既无自动结果、又无手工文件的记 `status=missing`。
+脚本重跑时保留这些文件，既不删除也不覆写题头；名单里既无自动结果、又无手工文件的记
+`status=missing`。手工文件的题头固定为 `【出處】` 与 `【存疑】` 两行，统计字数时整行剔除。
