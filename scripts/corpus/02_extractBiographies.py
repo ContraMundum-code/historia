@@ -139,8 +139,16 @@ def main() -> int:
     print("索引条目", {book: f"{len(idx)} 正名 / {len(att)} 附传" for book, (idx, att) in built.items()})
 
     args.out.mkdir(parents=True, exist_ok=True)
+    # 手工补录的传记单独登记，重跑时不清除
+    manual = {}
+    manual_csv = args.out / "sourcesManual.csv"
+    if manual_csv.exists():
+        with manual_csv.open(encoding="utf-8-sig") as fh:
+            manual = {row["person_id"]: row for row in csv.DictReader(fh)}
+    kept = {f"{pid}_{row['name']}.txt" for pid, row in manual.items()}
     for stale in args.out.glob("*.txt"):
-        stale.unlink()
+        if stale.name not in kept:
+            stale.unlink()
 
     stats = Counter()
     manifest = []
@@ -153,6 +161,13 @@ def main() -> int:
             if result:
                 break
         mode, volume, body = result if result else ("", "", "")
+        if not result and row["person_id"] in manual:
+            entry = manual[row["person_id"]]
+            path = args.out / f"{row['person_id']}_{row['name'].strip()}.txt"
+            if path.exists():
+                body = path.read_text(encoding="utf-8")
+                result = ("manual", entry["source"], body)
+                mode, volume = "manual", entry["source"]
         if mode == "attached":
             # 附传正文以名开头，补回姓氏后才可独立阅读
             body = re.sub(r"^(子|弟|兄|孫|曾孫|從子|從弟|從孫|族子|族弟|族孫|從父|族父|附)\s*"
@@ -166,10 +181,13 @@ def main() -> int:
             stats[(dynasty, "hit")] += 1
         else:
             stats[(dynasty, "miss")] += 1
+        book = volume.split("·")[0] if mode == "manual" else volume.split("/")[0]
         manifest.append({"person_id": row["person_id"], "name": row["name"].strip(),
-                         "dynasty": dynasty, "book": volume.split("/")[0],
-                         "volume": volume, "mode": mode, "chars": len(body),
-                         "status": "ok" if result else "missing"})
+                         "dynasty": dynasty, "book": book, "volume": volume,
+                         "mode": mode, "chars": len(body),
+                         "status": "ok" if result else "missing",
+                         "source": manual.get(row["person_id"], {}).get("source", "") if mode == "manual" else volume,
+                         "note": manual.get(row["person_id"], {}).get("note", "")})
 
     with (args.out / "manifest.csv").open("w", encoding="utf-8-sig", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=list(manifest[0].keys()))
