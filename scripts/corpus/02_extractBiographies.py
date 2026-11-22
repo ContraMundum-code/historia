@@ -28,7 +28,8 @@ VOLUME_PAGE = re.compile(r"^[^/]+/卷[零一二三四五六七八九十百〇0-9
 # 亲属前缀。必须带分隔符，否则「孫構」「曾鞏」这类姓名会被误当成附传标记
 ATTACHED = re.compile(r"^(子|弟|兄|孫|曾孫|從子|從弟|從孫|族子|族弟|族孫|從父|族父|附)[:：\s]")
 SEQ_SUFFIX = re.compile(r"(上|下|中)$")
-VARIANT_CHARS = str.maketrans({"脩": "修", "濬": "浚", "叡": "睿", "褘": "禕", "沉": "沈", "眘": "昚", "勗": "勖"})
+VARIANT_CHARS = str.maketrans({"脩": "修", "濬": "浚", "叡": "睿", "褘": "禕", "沉": "沈", "眘": "昚", "勗": "勖",
+                               "翱": "翺", "栖": "棲"})
 HAN = re.compile(r"[\u4e00-\u9fff]")
 MIN_SECTION_CHARS = 80
 
