@@ -15,8 +15,8 @@
 
 收录：除授贬谪、战役、出使、上书进谏、弹劾、兴学赈灾、修城池桥梁、著述成书、党争起落、生死葬祭。
 
-不收录：纯履历铺陈（「歷知某州、某府」）、家世交代（「父某，贈某官」）、
-无年份的品行评价（「為人峭直耿介」）、他人转述的旁证。
+不收录：纯履历铺陈（「历知某州、某府」）、家世交代（「父某，赠某官」）、
+无年份的品行评价（「为人峭直耿介」）、他人转述的旁证。
 
 ### 1.2 事件表字段
 
@@ -25,7 +25,7 @@
 | event_name | 事件名。同一事件在多篇语料出现时用同一名称，便于去重 |
 | event_type | 政治、军事、外交、文化、经济、司法、其他，八选一 |
 | year | 公元年份整数。原文只有年号纪年时换算后填此列 |
-| year_raw | 原文纪年照录，如「元豐五年」「紹興十一年」 |
+| year_raw | 原文纪年照录，如「元丰五年」「绍兴十一年」 |
 | location | 发生地，原文无载则留空，不要推测 |
 | description | 100–300 字，据原文概述 |
 | source_citation | 与 `data/corpus/manifest.csv` 的 `volume` 列一致，如 `宋史/卷338` |
@@ -57,15 +57,15 @@
 
 ```csv
 event_name,event_type,year,year_raw,location,description,source_citation,source_quote
-烏臺詩案,司法,1079,元豐二年,御史臺獄,蘇軾因詩文被劾謗訕朝政，下御史臺獄，後貶黃州。,宋史/卷338,……
+乌台诗案,司法,1079,元丰二年,御史台狱,苏轼因诗文被劾谤讪朝政，下御史台狱，后贬黄州。,宋史/卷338,……
 ```
 
 `data/annotations/eventParticipant.csv`：
 
 ```csv
 event_name,year,person_id,role
-烏臺詩案,1079,3767,主角
-烏臺詩案,1079,1493,支持者
+乌台诗案,1079,3767,主角
+乌台诗案,1079,1493,支持者
 ```
 
 ## 二、人物身份标注
@@ -90,7 +90,7 @@ event_name,year,person_id,role
 | source | 含义 | confidence |
 |---|---|---|
 | cbdb | 直接取 CBDB 的 `POSTED_TO_OFFICE_DATA` 官职名 | 1.0 |
-| rule | 由官职名按规则映射，如 `同中書門下平章事`→宰相 | 0.9 |
+| rule | 由官职名按规则映射，如 `同中书门下平章事`→宰相 | 0.9 |
 | manual | 人工判断，CBDB 无官职记录或官职推不出身份时 | 1.0 |
 
 规则映射写在 `scripts/annotations/deriveCategory.py` 里，规则表单独成 CSV，便于复核。
@@ -101,8 +101,8 @@ event_name,year,person_id,role
 
 ```csv
 person_id,name,category_name,source,confidence,evidence
-3767,蘇軾,文学家,rule,0.9,禮部尚書/翰林學士
-3767,蘇軾,政治家,manual,1.0,
+3767,苏轼,文学家,rule,0.9,礼部尚书/翰林学士
+3767,苏轼,政治家,manual,1.0,
 ```
 
 `evidence` 填支撑该身份的官职名或判断理由，manual 行可留空。
@@ -131,7 +131,7 @@ person_id,name,category_name,source,confidence,evidence
 
 ```csv
 sentence_id,sentence,person_a,person_b,relation_type,evidence,document_volume
-T0001,軾與轍兄弟友愛，……,蘇軾,蘇轍,家族,兄弟,宋史/卷338
+T0001,轼与辙兄弟友爱，……,苏轼,苏辙,家族,兄弟,宋史/卷338
 ```
 
 关系类型取 `data/dictionaries/relations.csv` 的六类：师生、家族、朋友、合作、对立、君臣。
