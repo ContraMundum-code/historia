@@ -11,24 +11,25 @@ historia/
 ├── frontend/            Vue 3 前端
 │   └── src/
 │       ├── api/         接口封装
-│       ├── components/  公共组件
 │       ├── views/       页面
-│       ├── router/      路由
-│       └── stores/      状态
+│       └── router/      路由
 ├── backend/             Flask 后端
 │   ├── app/
 │   │   ├── models/      ORM 模型
 │   │   ├── routes/      接口路由
 │   │   ├── services/    业务逻辑
 │   │   └── nlp/         文本抽取模块
+│   ├── migrations/      数据库迁移
 │   └── run.py           开发入口
 ├── data/
-│   ├── raw/             原始语料与 CBDB 离线库（不入库）
-│   ├── processed/       清洗后文本
-│   ├── dictionaries/    人物、别名、关系三张表
-│   └── samples/         标注样本与测试集
+│   ├── raw/             CBDB 离线库（不入库）
+│   ├── corpus/          330 篇本传正文与采集登记表
+│   ├── dictionaries/    人物、别名、关系、官职四张表
+│   └── annotations/     事件、参与者、身份、测试集四张标注表
 ├── database/            建表与初始化脚本
-├── scripts/dataPrep/    数据导出脚本
+├── scripts/
+│   ├── dataPrep/        CBDB 导出
+│   └── corpus/          语料采集与抽取（一次性工具）
 ├── docs/                设计与接口文档
 └── logs/                脚本运行日志（不入库）
 ```

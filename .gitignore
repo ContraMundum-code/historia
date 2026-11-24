@@ -12,9 +12,7 @@ dist/
 
 # 数据与模型：原始语料体积大，不入库
 data/raw/*
-data/processed/*
 !data/raw/.gitkeep
-!data/processed/.gitkeep
 
 # 模型权重
 *.bin
