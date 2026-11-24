@@ -35,6 +35,8 @@
 按人抽出，每人一个 `{person_id}_{姓名}.txt`，命名与 `dictionaries/person.csv` 的
 `person_id` 对齐。`manifest.csv` 记录书名、卷次、匹配方式、字数与状态。
 
+全部 330 篇正文统一为简体，UTF-8 无 BOM。人物表、别名表、官职表仍为繁体，比对时需繁简归一。
+
 名录共 374 人，按 person_id 排序切成三段：personA 13–10259、personB 10289–32540、
 personC 32593–189264。三段共 374 人均已处理，330 人取得原文，44 人的未采得原因见 missing.csv。
 
