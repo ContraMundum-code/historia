@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS person_category_mapping (
   KEY idx_pcm_person (person_id),
   CONSTRAINT fk_pcm_person FOREIGN KEY (person_id) REFERENCES person (person_id),
   CONSTRAINT fk_pcm_category FOREIGN KEY (category_id) REFERENCES person_category (category_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  COMMENT='人物身份多对多。每人 1-4 条：至少一条由标注流程保证，至多四条由 trg_pcm_max4 强制';
 
 CREATE TABLE IF NOT EXISTS person_alias (
   alias_id   INT PRIMARY KEY AUTO_INCREMENT,
@@ -126,3 +127,17 @@ CREATE TABLE IF NOT EXISTS extraction_record (
   created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_record_document FOREIGN KEY (document_id) REFERENCES document (document_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 身份数上限：每人最多 4 条 person_category_mapping
+-- 身份标签用于检索与画像筛选，条数过多会失去区分度，规则见 docs/annotationGuidelines.md 2.2
+DROP TRIGGER IF EXISTS trg_pcm_max4;
+DELIMITER //
+CREATE TRIGGER trg_pcm_max4 BEFORE INSERT ON person_category_mapping
+FOR EACH ROW
+BEGIN
+  IF (SELECT COUNT(*) FROM person_category_mapping WHERE person_id = NEW.person_id) >= 4 THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'person_category_mapping: 每人最多 4 个身份';
+  END IF;
+END//
+DELIMITER ;

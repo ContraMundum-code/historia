@@ -1,7 +1,7 @@
 # 标注规范
 
 适用于事件抽取、人物身份标注、测试集标注三项任务。字段与枚举以 `database/schema.sql`
-为准，交付时按本文的 CSV 模板填写，脚本 `scripts/annotations/loadAnnotations.py` 负责校验入库。
+为准，交付时按本文的 CSV 模板填写；入库脚本待补，当前由人工按第四节核对。
 
 ## 一、事件抽取
 
@@ -23,7 +23,7 @@
 | 字段 | 要求 |
 |---|---|
 | event_name | 事件名。同一事件在多篇语料出现时用同一名称，便于去重 |
-| event_type | 政治、军事、外交、文化、经济、司法、其他，八选一 |
+| event_type | 政治、军事、外交、文化、经济、司法、其他，七选一 |
 | year | 公元年份整数。原文只有年号纪年时换算后填此列 |
 | year_raw | 原文纪年照录，如「元丰五年」「绍兴十一年」 |
 | location | 发生地，原文无载则留空，不要推测 |
@@ -44,7 +44,8 @@
 
 | 字段 | 要求 |
 |---|---|
-| event_id | 事件编号，入库时由脚本回填，CSV 阶段用事件名占位 |
+| event_name | 事件名，与 `event.csv` 的 `event_name` 一致；入库时由加载脚本解析为 `event_id` |
+| year | 公元年份，与 `event.csv` 同一事件的 `year` 一致，用于定位事件 |
 | person_id | 必须是 `data/dictionaries/person.csv` 里的 person_id |
 | role | 主角、主谋、参与者、支持者、反对者、受害者、见证者、其他，八选一 |
 
@@ -72,7 +73,7 @@ event_name,year,person_id,role
 
 ### 2.1 词表
 
-现有人物身份九个，固定不新增，标不出就写「其他」：
+现有人物身份十类，与 `database/seed.sql` 的 `person_category` 初始化一致，固定不新增，标不出就写「其他」：
 
 政治家、军事家、文学家、诗人、思想家、史学家、书法家、宰相、将领、其他
 
@@ -85,6 +86,10 @@ event_name,year,person_id,role
 
 一人可有多条身份，如欧阳修标文学家、史学家、政治家三条。
 
+每人上限四条。身份标签用于检索与画像筛选，标满七八个时标签失去区分度：按「政治家」筛选，
+374 人里 236 人都会命中，等于没有筛选。现有数据中最高为四条，以此定为上限。
+超过四条时保留证据最硬的前四条，其余删除。
+
 ### 2.3 三条来源
 
 | source | 含义 | confidence |
@@ -93,7 +98,7 @@ event_name,year,person_id,role
 | rule | 由官职名按规则映射，如 `同中书门下平章事`→宰相 | 0.9 |
 | manual | 人工判断，CBDB 无官职记录或官职推不出身份时 | 1.0 |
 
-规则映射写在 `scripts/annotations/deriveCategory.py` 里，规则表单独成 CSV，便于复核。
+规则表单独成 CSV，便于复核；映射脚本 `scripts/annotations/deriveCategory.py` 待补，当前按规则表人工标注。
 
 ### 2.4 CSV 模板
 
@@ -138,7 +143,7 @@ T0001,轼与辙兄弟友爱，……,苏轼,苏辙,家族,兄弟,宋史/卷338
 
 ## 四、交付前自检
 
-跑 `python scripts/annotations/checkAnnotations.py`，四项不通过不得提交：
+按下列四项核对，四项不通过不得提交；校验脚本 `scripts/annotations/checkAnnotations.py` 待补，落地后改为自动执行：
 
 1. 事件表 `event_name+year` 无重复
 2. 参与者表 person_id 全部存在于 `person.csv`
