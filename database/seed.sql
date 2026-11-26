@@ -14,4 +14,5 @@ INSERT INTO person_category (category_name, description) VALUES
   ('史学家', ''),
   ('书法家', ''),
   ('宰相', ''),
-  ('将领', '');
+  ('将领', ''),
+  ('其他', '');
