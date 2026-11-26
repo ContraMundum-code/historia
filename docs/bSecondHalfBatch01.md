@@ -80,7 +80,7 @@
 
 ```text
 python scripts/annotations/secondHalf/deriveCategory.py
-python scripts/annotations/secondHalf/checkAnnotations.py
+python scripts/annotations/checkAnnotations.py
 python scripts/annotations/secondHalf/test_identity_review.py
 ```
 
@@ -92,3 +92,22 @@ python scripts/annotations/secondHalf/test_identity_review.py
 
 数据库种子中的身份词表是否包含“其他”需组长在入库前确认，本 PR 不改 SQL。
 下一批优先处理身份复核清单，并继续采集后半组事件，按批次记录新增量。
+
+## 语料外证据说明
+
+以下三人的身份判断依据来自《宋史》《明史》之外的材料，原文不在 `data/corpus/` 的 330 篇内，
+`evidence` 列已写明所据书名、卷次与引文，使用时按外部文献对待：
+
+| person_id | 人物 | 身份 | 所据文献 |
+|---|---|---|---|
+| 27606 | 刘辰翁 | 诗人 | 《元诗纪事》卷31 引《癸辛杂识》 |
+| 29608 | 姜夔 | 诗人 | 《白石道人诗集》陆钟辉序 |
+| 56580 | 茅元仪 | 军事家 | 《武备志》作者及总目 |
+
+其余 583 条身份的依据均可在本传或 `personOffice.csv` 中复核。
+
+## 脚本归并
+
+`secondHalf/checkAnnotations.py` 已删除。自检统一用 `scripts/annotations/checkAnnotations.py`，
+五项覆盖事件去重、参与者 ID、身份覆盖、测试集隔离与身份数上限。本目录只保留本批专用输入
+（`manualCategories.csv` 等）与 `deriveCategory.py`。
