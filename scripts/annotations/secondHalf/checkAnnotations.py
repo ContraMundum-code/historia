@@ -68,26 +68,49 @@ def check():
             principal[key] += 1
     require(all(principal[key] == 1 for key in keys), '本批每个事件须且仅有一位主角')
     category_keys = set()
+    references = read_csv(Path(__file__).resolve().parent / 'manualSourceReferences.csv')
+    reference_map = {(r['person_id'], r['category_name']): r for r in references}
+    require(len(reference_map) == len(references), '身份引文索引重复')
     for row in categories:
         pid = row['person_id']
         require(pid in people and row['name'] == people[pid]['name'], '身份人物引用无效')
         require(row['category_name'] in '政治家 军事家 文学家 诗人 思想家 史学家 书法家 宰相 将领 其他'.split(), '身份类别无效')
         require((row['source'], row['confidence']) in [('manual', '1.0'), ('rule', '0.9'), ('cbdb', '1.0')], '来源或置信度无效')
         require(row['evidence'], '身份初标必须留证据或待核原因')
+        require('初标占位' not in row['evidence'], '禁止使用统一初标占位说明')
         key = (pid, row['category_name'])
         require(key not in category_keys, '身份重复')
         category_keys.add(key)
         if row['source'] == 'manual' and row['category_name'] != '其他':
             quote = row['evidence'].split('：「', 1)[1][:-1]
-            require(re.sub(r'\s+', '', quote) in re.sub(r'\s+', '', texts.get(pid, '')),
-                    f'身份引文不在本传中：{pid}')
+            reference = reference_map.get(key)
+            if reference:
+                require(row['evidence'] == reference['source_citation'] + '：「' + reference['source_quote'] + '」', '引文与索引不一致')
+                require(reference['reason'], '补充身份缺判断理由')
+                if reference['source_url']:
+                    require(reference['source_url'].startswith('https://') and not reference['source_person_id'], '外部引文来源格式无效')
+                else:
+                    require(reference['source_person_id'] in texts, '跨传证据文件缺失')
+                    require(re.sub(r'\s+', '', quote) in re.sub(r'\s+', '', texts[reference['source_person_id']]), '本地补充引文不在指定传记中')
+            else:
+                require(re.sub(r'\s+', '', quote) in re.sub(r'\s+', '', texts.get(pid, '')),
+                        f'身份引文不在本传中：{pid}')
+    require(set(reference_map) <= category_keys, '引文索引引用了不存在的身份')
     require({r['person_id'] for r in categories} == scope, '身份未覆盖后187人')
+    require(all(count <= 4 for count in Counter(r['person_id'] for r in categories).values()), '每人身份不能超过4条')
     require(categories == derive(), '身份输出与规则、补充表不一致')
     others = {r['person_id'] for r in categories if r['category_name'] == '其他'}
     reviewed = {r['person_id'] for r in read_csv(ANN / 'bReview.csv') if r['item'] == '身份初标'}
     require(others == reviewed, '其他占位必须逐人进入待复核清单')
+    audit = read_csv(ANN / 'bIdentityReview.csv')
+    require(len(audit) == len({r['person_id'] for r in audit}) == 73, '原73人复核记录不完整或重复')
+    for item in audit:
+        actual = {r['category_name'] for r in categories if r['person_id'] == item['person_id']}
+        require(actual == set(item['new_categories'].split('|')), '逐人复核结果与主表不一致')
+        if item['person_id'] in others:
+            require(item['remaining_issue'] and item['remaining_issue'] in item['evidence'], '其他缺少本人具体缺项')
     print(f'B后半段校验通过：{len(events)}事件、{len(participants)}参与记录、{len(categories)}身份记录；覆盖{len(scope)}人，其他待复核{len(others)}人。')
-    print('本检查验证格式、引用及证据存在性；历史判断和初标身份仍需审核。C测试集和弱标注隔离检查不在本批范围。')
+    print('本地引文验证存在性；外部引文只验证来源索引，需沿链接审核。历史判断仍需审核；不检查C测试集与弱标注隔离。')
 
 
 if __name__ == '__main__':

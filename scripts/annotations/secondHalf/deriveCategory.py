@@ -41,7 +41,8 @@ def derive():
     people = {r['person_id']: r for r in ordered[187:]}
     rules = read_csv(HERE / 'categoryRules.csv')
     rows = {}
-    for office in read_csv(ROOT / 'data/dictionaries/personOffice.csv'):
+    offices = read_csv(ROOT / 'data/dictionaries/personOffice.csv')
+    for office in offices:
         if office['person_id'] not in people:
             continue
         person = people[office['person_id']]
@@ -56,7 +57,23 @@ def derive():
                     rows.setdefault(key, dict(person_id=person['person_id'], name=person['name'],
                         category_name=category, source='rule', confidence='0.9',
                         evidence=f"personOffice.csv：{office['office_name']}；规则{rule['rule_id']}"))
+    # 对原先漏判的人逐人核对官职，限定到本人和完整官名，不扩大匹配到其他人。
+    for decision in read_csv(HERE / 'reviewedOfficeCategories.csv'):
+        pid = decision['person_id']
+        if pid not in people or decision['name'] != people[pid]['name']:
+            raise ValueError(f'复核官职人物超出后半组或姓名不符：{pid}')
+        if not any(o['person_id'] == pid and o['office_name'] == decision['office_name']
+                   and valid_office(o, people[pid]) for o in offices):
+            raise ValueError(f'复核官职缺少有效原始记录：{pid}')
+        key = (pid, decision['category_name'])
+        if key in rows:
+            raise ValueError(f'复核官职与通用规则重复：{key}')
+        rows[key] = dict(person_id=pid, name=people[pid]['name'], category_name=key[1],
+            source='rule', confidence='0.9',
+            evidence=f"personOffice.csv：{decision['office_name']}；逐人复核：{decision['reason']}")
     for row in read_csv(HERE / 'manualCategories.csv'):
+        if row['person_id'] not in people or row['name'] != people[row['person_id']]['name']:
+            raise ValueError(f'补充表人物超出后半组或姓名不符：{row["person_id"]}')
         key = (row['person_id'], row['category_name'])
         if key in rows:
             raise ValueError(f'补充表与规则重复：{key}')
@@ -64,9 +81,7 @@ def derive():
     covered = {key[0] for key in rows}
     for pid, person in people.items():
         if pid not in covered:
-            rows[(pid, '其他')] = dict(person_id=pid, name=person['name'], category_name='其他',
-                source='manual', confidence='1.0',
-                evidence='初标占位：现有官职规则和本批文本证据未能确认词表内身份；待复核，不表示此人没有其他身份')
+            raise ValueError(f'{pid} {person["name"]} 缺少身份判断：必须逐人填写证据或具体缺项，禁止自动填其他')
     return sorted(rows.values(), key=lambda r: (int(r['person_id']), r['category_name']))
 
 
@@ -77,4 +92,4 @@ if __name__ == '__main__':
     # 合并后运行时保留另一组的行，仅替换自己负责的后半段。
     front = [r for r in read_csv(path) if r['person_id'] not in scope]
     write_preserving_header(path, front + result)
-    print(f"身份初标：{len(result)}条，覆盖{len({r['person_id'] for r in result})}人；其中其他占位{sum(r['category_name'] == '其他' for r in result)}人")
+    print(f"身份标注：{len(result)}条，覆盖{len({r['person_id'] for r in result})}人；证据不足保留其他{sum(r['category_name'] == '其他' for r in result)}人")
