@@ -2,6 +2,7 @@
 import csv
 import io
 import re
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -82,6 +83,9 @@ def derive():
     for pid, person in people.items():
         if pid not in covered:
             raise ValueError(f'{pid} {person["name"]} 缺少身份判断：必须逐人填写证据或具体缺项，禁止自动填其他')
+    excessive = {pid: count for pid, count in Counter(key[0] for key in rows).items() if count > 4}
+    if excessive:
+        raise ValueError(f'每人最多4条身份，请保留证据最硬的条目：{excessive}')
     return sorted(rows.values(), key=lambda r: (int(r['person_id']), r['category_name']))
 
 

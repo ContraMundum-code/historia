@@ -41,6 +41,17 @@ class IdentityReviewTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, '缺少有效原始记录：188'):
                 module.derive()
 
+    def test_fifth_identity_requires_review_instead_of_silent_truncation(self):
+        tables = {
+            'person.csv': self.people(),
+            'manualCategories.csv': [dict(person_id='188', name='人物188', category_name=cat,
+                source='manual', confidence='1.0', evidence='测试证据')
+                for cat in ['文学家','诗人','思想家','史学家','书法家']],
+        }
+        with patch.object(module, 'read_csv', side_effect=lambda path: tables.get(path.name, [])):
+            with self.assertRaisesRegex(ValueError, '最多4条身份'):
+                module.derive()
+
     def test_header_bytes_and_quoted_evidence_survive(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'sample.csv'
