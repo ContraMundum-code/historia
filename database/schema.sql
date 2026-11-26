@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS extraction_record (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 身份数上限：每人最多 4 条 person_category_mapping
--- 身份标签用于检索与画像筛选，条数过多会失去区分度，规则见 docs/annotationGuidelines.md 2.2
+-- 身份标签用于检索与画像筛选，条数过多会失去区分度，规则见 docs/zhangcheng/annotationGuidelines.md 2.2
 DROP TRIGGER IF EXISTS trg_pcm_max4;
 DELIMITER //
 CREATE TRIGGER trg_pcm_max4 BEFORE INSERT ON person_category_mapping

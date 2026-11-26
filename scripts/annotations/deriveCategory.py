@@ -13,7 +13,7 @@
 输出：
     data/annotations/personCategory.csv  （按 person_id 排序；--roster 时只含名单内人物）
 
-规范见 docs/annotationGuidelines.md：宰相必兼标政治家；每人至少一条，推不出写「其他」。
+规范见 docs/zhangcheng/annotationGuidelines.md：宰相必兼标政治家；每人至少一条，推不出写「其他」。
 """
 import argparse
 import csv

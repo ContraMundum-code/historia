@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""标注交付前自检，对应 docs/annotationGuidelines.md 第四节：
+"""标注交付前自检，对应 docs/zhangcheng/annotationGuidelines.md 第四节：
 
 1. 事件表 event_name+year 无重复
 2. 参与者表 person_id 全部存在于 person.csv

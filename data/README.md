@@ -68,4 +68,4 @@ personC 段新增 103 篇，其中 5 篇取维基文库、93 篇取汉川草庐�
 手工补录仍使用【出处】【存疑】题头并登记 sourcesManual.csv。21 人未取得可确认的传记，
 逐条记录所查底本与原因，未将“未检出”等同于“所有古籍均无传”。短附传、姓名异体、
 字号差异及底本纪年疑点保留在 manifest.csv 的 note 中。详细范围、来源和检查见
-[personC 采集记录](../docs/personC_corpus.md)。
+[personC 采集记录](../docs/wangyushan/personC_corpus.md)。

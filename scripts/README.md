@@ -4,7 +4,7 @@
 
 **这些脚本不参与系统运行**。Flask 后端启动、前端构建、数据库读写都不依赖本目录；
 最终交付的系统只需 `backend/`、`frontend/`、`database/`、`data/`、`docs/`。本目录保留
-在仓库里是为了让数据处理过程可复现，`docs/system_design.md` 的目录结构图不列此项。
+在仓库里是为了让数据处理过程可复现，`docs/zhangcheng/system_design.md` 的目录结构图不列此项。
 
 按用途分子目录，每个脚本自己写日志到 `logs/`。
 

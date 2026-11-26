@@ -95,6 +95,9 @@ document、person_relation、event、event_participant、extraction_record。
 
 ## 文档
 
-- `docs/system_design.md` 系统设计与数据流
-- `docs/api_documentation.md` 接口说明与抽取结果格式
+`docs/` 按成员分目录，各自维护自己那部分，避免同一文件被多人反复改：
+
+- `docs/zhangcheng/` 系统设计与数据流、接口说明、标注规范、关系分类模型设计
+- `docs/huhao/` B 阶段前半段交付记录
+- `docs/wangyushan/` personC 语料采集、B 阶段后半段交付记录
 - `scripts/README.md` 脚本约定
