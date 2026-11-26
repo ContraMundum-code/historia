@@ -6,6 +6,7 @@
 3. 身份表覆盖人物无空缺（默认对照 person.csv 全部 374 人；分半提交时用
    --roster 限定范围，如 --roster .scratch/workload/first187.csv）
 4. 测试集句子与弱标注结果无交集（文件不存在或为空时视为通过并注明）
+5. 每人身份数不超过 4 条
 
 用法：
     python scripts/annotations/checkAnnotations.py
@@ -119,6 +120,21 @@ def main() -> int:
             ok = False
         else:
             print(f"[4] 测试集 {len(ts_sents)} 句与弱标注 {len(weak_sents)} 条无交集 —— PASS")
+
+    # 5. 身份数上限 4 条
+    from collections import Counter
+
+    if pc is None:
+        print("[5] personCategory.csv 不存在 —— FAIL")
+        ok = False
+    else:
+        cnt = Counter(r["person_id"].strip() for r in pc)
+        over = {k: v for k, v in cnt.items() if v > 4}
+        if over:
+            print(f"[5] 身份数超过 4 条的有 {len(over)} 人: {list(over.items())[:5]} —— FAIL")
+            ok = False
+        else:
+            print(f"[5] 身份数上限 4 条，当前最多 {max(cnt.values())} 条 —— PASS")
 
     print("总体:", "全部通过" if ok else "存在未通过项")
     return 0 if ok else 1
